@@ -3,7 +3,7 @@
 **CertificateExporter** is a lightweight Windows GUI tool that helps you export certificates from the Windows Certificate Store and prepare Linux-ready TLS files with consistent naming and safe export handling.
 
 ### Who it's for
-Targets IT Pros and admins who need a fast, repeatable way to move certificates from Windows environments to Linux-based services (NGINX, Apache, HAProxy, etc.) or just export a certificate to a .pfx file.
+Targets IT Pros and admins who need a fast, repeatable way to move certificates from Windows environments to Linux-based services (NGINX, Apache, HAProxy, etc.).
 
 ### Certificate sources
 Reads certificates from:
@@ -52,9 +52,34 @@ Verbose logging runs behind the scenes:
 - Falls back to common install locations including:
   - `C:\Program Files\OpenSSL-Win64\bin`
 
-### Minimal footprint
-- Single PowerShell script
-- Uses WinForms (no additional UI frameworks required)
+---
 
-### Best practice
-- Running as **Admin** is recommended if you plan to export from the **LocalMachine** store to avoid access issues.
+## Requirements
+
+### OpenSSL
+This tool relies on **OpenSSL** to convert PFX files into Linux-ready certificate/key/chain outputs.
+
+Recommended Windows distribution:
+- OpenSSL for Windows (Win64)
+
+You can download OpenSSL here:
+- https://slproweb.com/products/Win32OpenSSL.html
+
+> Tip: If you install OpenSSL to the default location, the tool should auto-detect it.  
+> Otherwise, set the path manually using the **OpenSSL path** field in the UI.
+
+### PowerShell version
+Recommended:
+- **Windows PowerShell 5.1** (best compatibility for WinForms on Windows)
+- or **PowerShell 7.2+** on Windows
+
+### Permissions / Run as Administrator
+You **do not** need admin rights for:
+- Browsing and exporting certificates from **CurrentUser\Personal**
+
+You **should run as Administrator** if you plan to:
+- Access or export from **LocalMachine\Personal**
+- Export certs where the private key ACL requires elevated rights
+
+If you experience access errors when selecting a LocalMachine certificate, re-run the tool with:
+- **Run as Administrator**
