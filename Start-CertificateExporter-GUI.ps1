@@ -7,7 +7,7 @@
     Start-CertificateExporter-GUI.ps1
 
 .DESCRIPTION
-    This WinForms tool:
+    This small powershell tool, run as a WinForms GUI based tool:
       1) Enumerates certificates from:
          - Cert:\CurrentUser\My
          - Cert:\LocalMachine\My
