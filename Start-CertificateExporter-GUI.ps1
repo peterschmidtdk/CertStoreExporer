@@ -19,14 +19,16 @@
          - <name>-chain.cer
          - <name>-fullchain.cer
       5) Can also convert an existing PFX to the same set
+      6) New in 1.18: Export Selected → Linux PEM files (uses a temporary PFX behind the scenes)
 
 .NOTES
     Recommended to run as Administrator if exporting from LocalMachine\My.
 
 .VERSION
-    1.17 - Added default OpenSSL path check for
-           C:\Program Files\OpenSSL-Win64\bin\openssl.exe
-           and a status/warning label under the OpenSSL path field.
+    1.18 - Added "Export Selected → Linux PEM files" action.
+           Uses a temporary PFX file (auto-cleaned) to generate Linux outputs.
+           Fixed OpenSSL call bug for chain export.
+           Retains default OpenSSL path check and status label.
            Tool name: CertificateExporter, script name: Start-CertificateExporter-GUI.ps1.
 
 .AUTHOR
@@ -43,7 +45,7 @@ Add-Type -AssemblyName System.Drawing
 # Configuration
 # ----------------------------
 $ScriptName    = "CertificateExporter"
-$ScriptVersion = "1.17"
+$ScriptVersion = "1.18"
 
 # Logs folder config
 $LogDir  = Join-Path (Get-Location).Path "Logs"
@@ -522,7 +524,7 @@ function Convert-PfxToLinuxFiles {
 
     # 3) Chain -> .cer
     $args = @("pkcs12","-in",$PfxFile,"-cacerts","-nokeys","-out",$chainFile) + $passArgs
-    Invoke-OpenSsl -OpenSsl -OpenSsl $OpenSsl -Args $args | Out-Null
+    Invoke-OpenSsl -OpenSsl $OpenSsl -Args $args | Out-Null
 
     # 4) Full chain -> .cer (leaf + chain)
     $certContent  = Get-Content -Path $certFile  -ErrorAction SilentlyContinue
@@ -630,7 +632,7 @@ $btnBrowseOpenSsl.Location = New-Object System.Drawing.Point(770, 430)
 $btnBrowseOpenSsl.Size = New-Object System.Drawing.Size(75, 28)
 $form.Controls.Add($btnBrowseOpenSsl)
 
-# NEW: OpenSSL status / warning label under the path
+# OpenSSL status / warning label under the path
 $lblOpenSslStatus = New-Object System.Windows.Forms.Label
 $lblOpenSslStatus.AutoSize = $true
 $lblOpenSslStatus.Location = New-Object System.Drawing.Point(110, 460)
@@ -638,6 +640,7 @@ $lblOpenSslStatus.ForeColor = [System.Drawing.Color]::DarkRed
 $lblOpenSslStatus.Text = ""
 $form.Controls.Add($lblOpenSslStatus)
 
+# Row 1 buttons
 $btnRefresh = New-Object System.Windows.Forms.Button
 $btnRefresh.Text = "Refresh List"
 $btnRefresh.Location = New-Object System.Drawing.Point(12, 490)
@@ -650,22 +653,29 @@ $btnExportPfxOnly.Location = New-Object System.Drawing.Point(140, 490)
 $btnExportPfxOnly.Size = New-Object System.Drawing.Size(200, 35)
 $form.Controls.Add($btnExportPfxOnly)
 
+$btnExportLinuxOnly = New-Object System.Windows.Forms.Button
+$btnExportLinuxOnly.Text = "Export Selected → Linux PEM files"
+$btnExportLinuxOnly.Location = New-Object System.Drawing.Point(350, 490)
+$btnExportLinuxOnly.Size = New-Object System.Drawing.Size(270, 35)
+$form.Controls.Add($btnExportLinuxOnly)
+
+# Row 2 buttons
 $btnExport = New-Object System.Windows.Forms.Button
 $btnExport.Text = "Export Selected → PFX → Linux files"
-$btnExport.Location = New-Object System.Drawing.Point(350, 490)
+$btnExport.Location = New-Object System.Drawing.Point(12, 530)
 $btnExport.Size = New-Object System.Drawing.Size(270, 35)
 $form.Controls.Add($btnExport)
 
 $btnConvertExisting = New-Object System.Windows.Forms.Button
 $btnConvertExisting.Text = "Convert Existing PFX → Linux files"
-$btnConvertExisting.Location = New-Object System.Drawing.Point(630, 490)
+$btnConvertExisting.Location = New-Object System.Drawing.Point(300, 530)
 $btnConvertExisting.Size = New-Object System.Drawing.Size(292, 35)
 $form.Controls.Add($btnConvertExisting)
 
 $lblNamingRules = New-Object System.Windows.Forms.Label
 $lblNamingRules.AutoSize = $false
 $lblNamingRules.Size = New-Object System.Drawing.Size(910, 50)
-$lblNamingRules.Location = New-Object System.Drawing.Point(12, 530)
+$lblNamingRules.Location = New-Object System.Drawing.Point(12, 570)
 $lblNamingRules.ForeColor = [System.Drawing.Color]::DimGray
 $lblNamingRules.Text =
     "Linux export naming rules: Folder = Common Name (CN). " +
@@ -674,7 +684,7 @@ $lblNamingRules.Text =
 $form.Controls.Add($lblNamingRules)
 
 $progress = New-Object System.Windows.Forms.ProgressBar
-$progress.Location = New-Object System.Drawing.Point(12, 580)
+$progress.Location = New-Object System.Drawing.Point(12, 620)
 $progress.Size = New-Object System.Drawing.Size(910, 18)
 $progress.Minimum = 0
 $progress.Maximum = 100
@@ -684,22 +694,22 @@ $form.Controls.Add($progress)
 $lblProgress = New-Object System.Windows.Forms.Label
 $lblProgress.Text = "Idle."
 $lblProgress.AutoSize = $true
-$lblProgress.Location = New-Object System.Drawing.Point(12, 602)
+$lblProgress.Location = New-Object System.Drawing.Point(12, 642)
 $form.Controls.Add($lblProgress)
 
 $txtStatus = New-Object System.Windows.Forms.TextBox
 $txtStatus.Multiline = $true
 $txtStatus.ReadOnly = $true
 $txtStatus.ScrollBars = "Vertical"
-$txtStatus.Location = New-Object System.Drawing.Point(12, 625)
-$txtStatus.Size = New-Object System.Drawing.Size(910, 100)
+$txtStatus.Location = New-Object System.Drawing.Point(12, 665)
+$txtStatus.Size = New-Object System.Drawing.Size(910, 80)
 $form.Controls.Add($txtStatus)
 
 $lblFooter = New-Object System.Windows.Forms.Label
 $lblFooter.Text = "$ScriptName v$ScriptVersion"
 $lblFooter.AutoSize = $true
 $lblFooter.ForeColor = [System.Drawing.Color]::Gray
-$lblFooter.Location = New-Object System.Drawing.Point(12, 735)
+$lblFooter.Location = New-Object System.Drawing.Point(12, 755)
 $form.Controls.Add($lblFooter)
 
 # ----------------------------
@@ -725,6 +735,7 @@ function Set-UiBusy {
     param([bool]$Busy)
     $btnRefresh.Enabled         = -not $Busy
     $btnExport.Enabled          = -not $Busy
+    $btnExportLinuxOnly.Enabled = -not $Busy
     $btnExportPfxOnly.Enabled   = -not $Busy
     $btnConvertExisting.Enabled = -not $Busy
     $btnBrowseOpenSsl.Enabled   = -not $Busy
@@ -745,7 +756,7 @@ function Warn-IfChainMissingUI {
     }
 }
 
-# NEW: update OpenSSL status label based on current path
+# update OpenSSL status label based on current path
 function Update-OpenSslStatusLabel {
     $path = $txtOpenSsl.Text
     if ([string]::IsNullOrWhiteSpace($path)) {
@@ -832,6 +843,8 @@ $btnBrowseOpenSsl.Add_Click({
     }
 })
 
+$txtOpenSsl.Add_TextChanged({ Update-OpenSslStatusLabel })
+
 # Export Selected → PFX only
 $btnExportPfxOnly.Add_Click({
     Set-UiBusy -Busy $true
@@ -893,6 +906,94 @@ $btnExportPfxOnly.Add_Click({
             [System.Windows.Forms.MessageBoxIcon]::Error
         ) | Out-Null
     } finally {
+        Set-Progress -Value 0 -Text "Idle."
+        Set-UiBusy -Busy $false
+    }
+})
+
+# NEW: Export Selected → Linux PEM files (temp PFX)
+$btnExportLinuxOnly.Add_Click({
+    Set-UiBusy -Busy $true
+    $tempPfx = $null
+    try {
+        Set-Progress -Value 0 -Text "Starting Linux PEM export..."
+
+        $selected = Get-SelectedCertOrWarn
+        if (-not $selected) { return }
+
+        $openSslPath = $txtOpenSsl.Text
+        if ([string]::IsNullOrWhiteSpace($openSslPath) -or -not (Test-Path $openSslPath)) {
+            Update-OpenSslStatusLabel
+            [System.Windows.Forms.MessageBox]::Show(
+                "OpenSSL.exe not found. Please set the OpenSSL path.",
+                "OpenSSL missing",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            ) | Out-Null
+            return
+        }
+
+        Set-Progress -Value 25 -Text "Waiting for password input..."
+        $pwd = Get-PfxPasswordDialog `
+            -Title "Temporary PFX Password" `
+            -Prompt "Create and confirm a password for a temporary PFX (used only to generate Linux PEM files):" `
+            -RequireConfirm $true
+
+        if (-not $pwd) {
+            Write-Status "Password prompt cancelled or invalid."
+            return
+        }
+
+        # Determine export folder based on CN
+        $fallback   = if ($selected.FriendlyName) { $selected.FriendlyName } else { $selected.Thumbprint }
+        $folderName = Get-FolderNameForCert -CertObject $selected -FallbackName $fallback
+        $exportDir  = Ensure-ExportFolder -FolderName $folderName
+        Write-Status "Linux export folder: $exportDir"
+
+        $baseName = Remove-InvalidFileNameChars -Name $folderName
+        if (-not $baseName) { $baseName = "export" }
+
+        # Create temp PFX in %TEMP%
+        $tempDir = [IO.Path]::GetTempPath()
+        $tempPfx = Join-Path $tempDir ("{0}.pfx" -f $baseName)
+        Write-Log "Using temporary PFX for Linux-only export: $tempPfx" "DEBUG"
+
+        Set-Progress -Value 50 -Text "Exporting temporary PFX..."
+        Export-SelectedCertToPfx -CertPath $selected.Path -PfxFilePath $tempPfx -Password $pwd
+        Write-Status "Temporary PFX created."
+
+        Set-Progress -Value 75 -Text "Generating Linux PEM files..."
+        $result = Convert-PfxToLinuxFiles -OpenSsl $openSslPath -PfxFile $tempPfx -Password $pwd -OutputDir $exportDir -BaseName $baseName
+
+        Write-Status "Created:"
+        Write-Status "  cert:      $($result.CertFile)"
+        Write-Status "  privkey:   $($result.PrivateKeyFile)"
+        Write-Status "  chain:     $($result.ChainFile)"
+        Write-Status "  fullchain: $($result.FullchainFile)"
+
+        Set-Progress -Value 100 -Text "Done."
+        Warn-IfChainMissingUI -ResultObject $result
+
+        [System.Windows.Forms.MessageBox]::Show(
+            "Linux PEM export complete.`r`n`r`nFolder:`r`n$($result.OutputDir)`r`n`r`nLog:`r`n$LogFile",
+            "Done",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        ) | Out-Null
+    } catch {
+        $err = $_.Exception.Message
+        Write-Status "ERROR: $err"
+        Write-Log $err "ERROR"
+        [System.Windows.Forms.MessageBox]::Show(
+            $err, "Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    } finally {
+        if ($tempPfx -and (Test-Path $tempPfx)) {
+            Write-Log "Cleaning up temporary PFX: $tempPfx" "DEBUG"
+            Remove-Item $tempPfx -Force -ErrorAction SilentlyContinue
+        }
         Set-Progress -Value 0 -Text "Idle."
         Set-UiBusy -Busy $false
     }
@@ -1090,8 +1191,6 @@ if (Test-Path $defaultOpenSsl) {
     }
 }
 
-# Update warning/info label according to whatever path we ended up with
 Update-OpenSslStatusLabel
-
 Load-CertList
 [void]$form.ShowDialog()
